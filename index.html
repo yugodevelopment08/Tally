@@ -269,16 +269,37 @@
             color: #FFB800;
         }
 
-        .month-filter {
+        .filters {
+            display: flex;
+            gap: 20px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
 
-        .month-filter select {
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-group select {
             padding: 10px 15px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 14px;
             min-width: 150px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-group label {
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
 
         .loading {
@@ -437,11 +458,19 @@
             </div>
         </div>
 
-        <div class="month-filter">
-            <label for="monthSelect"><strong>Filter by Month:</strong></label>
-            <select id="monthSelect" onchange="filterByMonth()">
-                <option value="all">All Months</option>
-            </select>
+        <div class="filters">
+            <div class="filter-group">
+                <label for="yearSelect"><strong>Year:</strong></label>
+                <select id="yearSelect" onchange="applyFilters()">
+                    <option value="all">All Years</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="monthSelect"><strong>Month:</strong></label>
+                <select id="monthSelect" onchange="applyFilters()">
+                    <option value="all">All Months</option>
+                </select>
+            </div>
         </div>
 
         <div class="summary-cards">
@@ -789,6 +818,9 @@ Publishing to web creates a public CSV URL that the dashboard can access.
                 const month = row['Month'] || row['month'] || '';
                 const yearMonth = parseYearMonth(timestamp, month);
 
+                // Extract year and month number from yearMonthKey (format: "2024-01")
+                const [year, monthNum] = yearMonth.key.split('-').map(Number);
+
                 return {
                     timestamp: timestamp,
                     person: row['Sarah/Yugo'] || row['sarah/yugo'] || row['Person'] || '',
@@ -796,6 +828,8 @@ Publishing to web creates a public CSV URL that the dashboard can access.
                     amount: parseAmount(row['Amount'] || row['amount']),
                     notes: row['Notes'] || row['notes'] || '',
                     month: month,
+                    year: year,
+                    monthNum: monthNum,
                     yearMonthKey: yearMonth.key,
                     yearMonthDisplay: yearMonth.display,
                     yearMonthSort: yearMonth.sortValue
@@ -805,38 +839,36 @@ Publishing to web creates a public CSV URL that the dashboard can access.
             // Sort all data by timestamp
             allData.sort((a, b) => a.yearMonthSort - b.yearMonthSort);
 
-            // Populate month filter with year-month options (sorted chronologically)
-            const yearMonthMap = new Map();
-            allData.forEach(d => {
-                if (!yearMonthMap.has(d.yearMonthKey)) {
-                    yearMonthMap.set(d.yearMonthKey, {
-                        key: d.yearMonthKey,
-                        display: d.yearMonthDisplay,
-                        sort: d.yearMonthSort
-                    });
-                }
+            // Populate year filter (sorted chronologically)
+            const years = [...new Set(allData.map(d => d.year))].sort((a, b) => a - b);
+            const yearSelect = document.getElementById('yearSelect');
+            yearSelect.innerHTML = '<option value="all">All Years</option>';
+            years.forEach(year => {
+                yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
             });
 
-            const sortedYearMonths = [...yearMonthMap.values()].sort((a, b) => a.sort - b.sort);
-
+            // Populate month filter (1-12, with names)
             const monthSelect = document.getElementById('monthSelect');
             monthSelect.innerHTML = '<option value="all">All Months</option>';
-            sortedYearMonths.forEach(ym => {
-                monthSelect.innerHTML += `<option value="${ym.key}">${ym.display}</option>`;
+            monthNames.forEach((name, index) => {
+                monthSelect.innerHTML += `<option value="${index + 1}">${name}</option>`;
             });
 
             filteredData = [...allData];
             updateDashboard();
         }
 
-        // Filter by month
-        function filterByMonth() {
+        // Apply both year and month filters
+        function applyFilters() {
+            const selectedYear = document.getElementById('yearSelect').value;
             const selectedMonth = document.getElementById('monthSelect').value;
-            if (selectedMonth === 'all') {
-                filteredData = [...allData];
-            } else {
-                filteredData = allData.filter(d => d.yearMonthKey === selectedMonth);
-            }
+
+            filteredData = allData.filter(d => {
+                const yearMatch = selectedYear === 'all' || d.year === parseInt(selectedYear);
+                const monthMatch = selectedMonth === 'all' || d.monthNum === parseInt(selectedMonth);
+                return yearMatch && monthMatch;
+            });
+
             updateDashboard();
         }
 
