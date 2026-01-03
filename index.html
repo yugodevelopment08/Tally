@@ -453,7 +453,7 @@
                 <button class="btn btn-small btn-primary" onclick="loadFromSheet()">Refresh Now</button>
                 <label class="auto-refresh-toggle">
                     <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()">
-                    Auto-refresh (5 min)
+                    Auto-refresh (1 hour)
                 </label>
             </div>
         </div>
@@ -582,7 +582,7 @@
         };
 
         // Auto-refresh settings
-        const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+        const AUTO_REFRESH_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
         let autoRefreshTimer = null;
 
         // Global data storage
@@ -843,7 +843,7 @@ Publishing to web creates a public CSV URL that the dashboard can access.
                 console.log('Auto-refreshing data...');
                 loadFromSheet();
             }, AUTO_REFRESH_INTERVAL);
-            console.log('Auto-refresh enabled (every 5 minutes)');
+            console.log('Auto-refresh enabled (every 1 hour)');
         }
 
         // Stop auto-refresh timer
