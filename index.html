@@ -663,10 +663,23 @@
 
         // Parse timestamp and extract year-month key for sorting
         function parseYearMonth(timestamp, monthName) {
-            // Try to parse timestamp first (formats: YYYY-MM-DD, MM/DD/YYYY, etc.)
+            // Try to parse timestamp first
             if (timestamp) {
-                const date = new Date(timestamp);
-                if (!isNaN(date.getTime())) {
+                let date = null;
+
+                // Try DD/MM/YYYY format first (e.g., "25/11/2025 17:49:48")
+                const ddmmyyyyMatch = timestamp.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+                if (ddmmyyyyMatch) {
+                    const [, day, month, year] = ddmmyyyyMatch;
+                    date = new Date(year, month - 1, day); // month is 0-indexed
+                }
+
+                // Try other formats if DD/MM/YYYY didn't match
+                if (!date || isNaN(date.getTime())) {
+                    date = new Date(timestamp);
+                }
+
+                if (date && !isNaN(date.getTime())) {
                     const year = date.getFullYear();
                     const month = date.getMonth(); // 0-indexed
                     return {
