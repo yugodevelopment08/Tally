@@ -307,6 +307,90 @@
             border-radius: 4px;
         }
 
+        .data-status {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #28a745;
+            animation: none;
+        }
+
+        .status-indicator.error {
+            background: #dc3545;
+            animation: none;
+        }
+
+        .status-indicator.loading {
+            background: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        #statusText {
+            font-weight: 500;
+            color: #333;
+        }
+
+        #lastUpdated {
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 0.85rem;
+        }
+
+        .auto-refresh-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .auto-refresh-toggle input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
         @media (max-width: 768px) {
             .charts-grid {
                 grid-template-columns: 1fr;
@@ -319,6 +403,15 @@
             header h1 {
                 font-size: 1.8rem;
             }
+
+            .data-status {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .status-right {
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -329,17 +422,19 @@
             <p>Track and analyze expenses for Sarah & Yugo</p>
         </header>
 
-        <div class="data-source">
-            <h3>Data Source</h3>
-            <div class="input-group">
-                <input type="text" id="sheetUrl" placeholder="Enter published Google Sheet CSV URL..."
-                       value="https://docs.google.com/spreadsheets/d/19uE_m-Zx_ikGplK-E4rb0TDlxZs9M-5xqcJqSdW4Z9s/pub?gid=2103820485&single=true&output=csv">
-                <button class="btn btn-primary" onclick="loadFromSheet()">Load Data</button>
-                <button class="btn btn-secondary" onclick="loadSampleData()">Use Sample Data</button>
+        <div class="data-status">
+            <div class="status-left">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Connecting to Google Sheet...</span>
             </div>
-            <p class="help-text">
-                To use your Google Sheet: Go to <code>File → Share → Publish to web</code>, select CSV format, and paste the URL above.
-            </p>
+            <div class="status-right">
+                <span id="lastUpdated"></span>
+                <button class="btn btn-small btn-primary" onclick="loadFromSheet()">Refresh Now</button>
+                <label class="auto-refresh-toggle">
+                    <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()">
+                    Auto-refresh (5 min)
+                </label>
+            </div>
         </div>
 
         <div class="month-filter">
@@ -439,6 +534,27 @@
     </div>
 
     <script>
+        // Google Sheet Configuration - Your spreadsheet
+        const GOOGLE_SHEET_CONFIG = {
+            spreadsheetId: '19uE_m-Zx_ikGplK-E4rb0TDlxZs9M-5xqcJqSdW4Z9s',
+            gid: '2103820485',
+            // Different URL formats to try
+            getUrls: function() {
+                return [
+                    // Published web CSV (requires File > Share > Publish to web)
+                    `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/pub?gid=${this.gid}&single=true&output=csv`,
+                    // Visualization API (works with "Anyone with link")
+                    `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/gviz/tq?tqx=out:csv&gid=${this.gid}`,
+                    // Export URL
+                    `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/export?format=csv&gid=${this.gid}`
+                ];
+            }
+        };
+
+        // Auto-refresh settings
+        const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+        let autoRefreshTimer = null;
+
         // Global data storage
         let allData = [];
         let filteredData = [];
@@ -472,38 +588,131 @@
             return parseFloat(cleaned) || 0;
         }
 
-        // Load data from Google Sheet
+        // Update status display
+        function updateStatus(status, message) {
+            const indicator = document.getElementById('statusIndicator');
+            const text = document.getElementById('statusText');
+
+            indicator.className = 'status-indicator ' + status;
+            text.textContent = message;
+        }
+
+        // Update last updated time
+        function updateLastUpdatedTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('lastUpdated').textContent = `Last updated: ${timeStr}`;
+        }
+
+        // Load data from Google Sheet - tries multiple URL formats
         async function loadFromSheet() {
-            const url = document.getElementById('sheetUrl').value.trim();
-            if (!url) {
-                alert('Please enter a Google Sheet URL');
-                return;
+            updateStatus('loading', 'Connecting to Google Sheet...');
+
+            const urls = GOOGLE_SHEET_CONFIG.getUrls();
+            let lastError = null;
+
+            for (const url of urls) {
+                try {
+                    console.log('Trying URL:', url);
+                    const response = await fetch(url);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const csvText = await response.text();
+
+                    // Check if we got actual data (not an error page)
+                    if (csvText.includes('<!DOCTYPE') || csvText.includes('<html')) {
+                        throw new Error('Received HTML instead of CSV');
+                    }
+
+                    return new Promise((resolve, reject) => {
+                        Papa.parse(csvText, {
+                            header: true,
+                            skipEmptyLines: true,
+                            complete: function(results) {
+                                if (results.data && results.data.length > 0) {
+                                    processData(results.data);
+                                    updateStatus('connected', `Connected - ${results.data.length} records loaded`);
+                                    updateLastUpdatedTime();
+                                    resolve(true);
+                                } else {
+                                    reject(new Error('No data found'));
+                                }
+                            },
+                            error: function(error) {
+                                reject(error);
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.log('URL failed:', url, error.message);
+                    lastError = error;
+                    continue;
+                }
             }
 
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Failed to fetch data');
-                const csvText = await response.text();
+            // All URLs failed - show error and load sample data
+            console.error('All fetch attempts failed:', lastError);
+            updateStatus('error', 'Could not connect - Using sample data');
+            loadSampleData();
+            showConnectionHelp();
+        }
 
-                Papa.parse(csvText, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        processData(results.data);
-                    },
-                    error: function(error) {
-                        console.error('Parse error:', error);
-                        alert('Error parsing CSV data. Please check the URL.');
-                    }
-                });
-            } catch (error) {
-                console.error('Fetch error:', error);
-                alert('Could not load data. Make sure the sheet is published to web.\n\nGo to: File → Share → Publish to web → Select CSV format');
+        // Show connection help modal
+        function showConnectionHelp() {
+            const helpMessage = `
+To connect your Google Sheet automatically:
+
+1. Open your Google Sheet
+2. Go to File → Share → Publish to web
+3. Select the sheet tab
+4. Choose "Comma-separated values (.csv)"
+5. Click "Publish"
+6. Refresh this dashboard
+
+The sheet is currently shared as "view only" which doesn't allow automatic data fetching.
+Publishing to web creates a public CSV URL that the dashboard can access.
+            `;
+            console.log(helpMessage);
+        }
+
+        // Toggle auto-refresh
+        function toggleAutoRefresh() {
+            const checkbox = document.getElementById('autoRefresh');
+            if (checkbox.checked) {
+                startAutoRefresh();
+            } else {
+                stopAutoRefresh();
             }
         }
 
-        // Load sample data
+        // Start auto-refresh timer
+        function startAutoRefresh() {
+            stopAutoRefresh(); // Clear any existing timer
+            autoRefreshTimer = setInterval(() => {
+                console.log('Auto-refreshing data...');
+                loadFromSheet();
+            }, AUTO_REFRESH_INTERVAL);
+            console.log('Auto-refresh enabled (every 5 minutes)');
+        }
+
+        // Stop auto-refresh timer
+        function stopAutoRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+                console.log('Auto-refresh disabled');
+            }
+        }
+
+        // Load sample data (fallback)
         function loadSampleData() {
+            updateLastUpdatedTime();
             const sampleData = [
                 { Timestamp: '2024-01-05', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 8500, Notes: 'Weekly groceries', Month: 'January' },
                 { Timestamp: '2024-01-08', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 4200, Notes: 'Dinner', Month: 'January' },
@@ -956,9 +1165,15 @@
             });
         }
 
-        // Load sample data on page load
+        // Initialize dashboard on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadSampleData();
+            // Auto-load from Google Sheet
+            loadFromSheet();
+
+            // Start auto-refresh if checkbox is checked
+            if (document.getElementById('autoRefresh').checked) {
+                startAutoRefresh();
+            }
         });
     </script>
 </body>
