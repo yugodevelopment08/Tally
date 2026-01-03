@@ -570,9 +570,53 @@
             'Shopping': '#DDA0DD'
         };
 
-        // Month order for sorting
-        const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
-                          'July', 'August', 'September', 'October', 'November', 'December'];
+        // Month names for display
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+
+        // Parse timestamp and extract year-month key for sorting
+        function parseYearMonth(timestamp, monthName) {
+            // Try to parse timestamp first (formats: YYYY-MM-DD, MM/DD/YYYY, etc.)
+            if (timestamp) {
+                const date = new Date(timestamp);
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = date.getMonth(); // 0-indexed
+                    return {
+                        key: `${year}-${String(month + 1).padStart(2, '0')}`, // "2024-01" for sorting
+                        display: `${monthNames[month]} ${year}`, // "January 2024" for display
+                        sortValue: year * 12 + month // numeric value for easy sorting
+                    };
+                }
+            }
+
+            // Fallback: parse month name with current year assumption
+            if (monthName) {
+                const monthIndex = monthNames.findIndex(m =>
+                    m.toLowerCase() === monthName.toLowerCase()
+                );
+                if (monthIndex !== -1) {
+                    // Try to extract year from timestamp or use current year
+                    let year = new Date().getFullYear();
+                    if (timestamp) {
+                        const yearMatch = timestamp.match(/\b(20\d{2})\b/);
+                        if (yearMatch) year = parseInt(yearMatch[1]);
+                    }
+                    return {
+                        key: `${year}-${String(monthIndex + 1).padStart(2, '0')}`,
+                        display: `${monthName} ${year}`,
+                        sortValue: year * 12 + monthIndex
+                    };
+                }
+            }
+
+            // Last resort fallback
+            return {
+                key: '9999-99',
+                display: monthName || 'Unknown',
+                sortValue: 999999
+            };
+        }
 
         // Format currency
         function formatCurrency(amount) {
@@ -714,48 +758,71 @@ Publishing to web creates a public CSV URL that the dashboard can access.
         function loadSampleData() {
             updateLastUpdatedTime();
             const sampleData = [
-                { Timestamp: '2024-01-05', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 8500, Notes: 'Weekly groceries', Month: 'January' },
-                { Timestamp: '2024-01-08', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 4200, Notes: 'Dinner', Month: 'January' },
-                { Timestamp: '2024-01-10', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 12000, Notes: 'Electricity', Month: 'January' },
-                { Timestamp: '2024-01-15', 'Sarah/Yugo': 'Yugo', Activity: 'Transport', Amount: 3500, Notes: 'Train pass', Month: 'January' },
-                { Timestamp: '2024-01-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 6800, Notes: 'Home supplies', Month: 'January' },
-                { Timestamp: '2024-01-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'January' },
-                { Timestamp: '2024-01-28', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 7200, Notes: 'Groceries', Month: 'January' },
-                { Timestamp: '2024-02-03', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 5600, Notes: 'Restaurant', Month: 'February' },
-                { Timestamp: '2024-02-07', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 8500, Notes: 'Gas bill', Month: 'February' },
-                { Timestamp: '2024-02-12', 'Sarah/Yugo': 'Yugo', Activity: 'Grocery', Amount: 9200, Notes: 'Weekly groceries', Month: 'February' },
-                { Timestamp: '2024-02-18', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 2800, Notes: 'Taxi', Month: 'February' },
-                { Timestamp: '2024-02-22', 'Sarah/Yugo': 'Yugo', Activity: 'Shopping', Amount: 15000, Notes: 'New appliance', Month: 'February' },
-                { Timestamp: '2024-02-25', 'Sarah/Yugo': 'Sarah', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'February' },
-                { Timestamp: '2024-03-02', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 3800, Notes: 'Lunch', Month: 'March' },
-                { Timestamp: '2024-03-08', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 11200, Notes: 'Big shopping', Month: 'March' },
-                { Timestamp: '2024-03-15', 'Sarah/Yugo': 'Yugo', Activity: 'Utilities', Amount: 9800, Notes: 'Internet', Month: 'March' },
-                { Timestamp: '2024-03-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 4500, Notes: 'Clothes', Month: 'March' },
-                { Timestamp: '2024-03-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'March' },
-                { Timestamp: '2024-03-28', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 5200, Notes: 'Train tickets', Month: 'March' },
+                // 2024 data
+                { Timestamp: '2024-11-05', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 8500, Notes: 'Weekly groceries', Month: 'November' },
+                { Timestamp: '2024-11-08', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 4200, Notes: 'Dinner', Month: 'November' },
+                { Timestamp: '2024-11-10', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 12000, Notes: 'Electricity', Month: 'November' },
+                { Timestamp: '2024-11-15', 'Sarah/Yugo': 'Yugo', Activity: 'Transport', Amount: 3500, Notes: 'Train pass', Month: 'November' },
+                { Timestamp: '2024-11-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 6800, Notes: 'Home supplies', Month: 'November' },
+                { Timestamp: '2024-11-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'November' },
+                { Timestamp: '2024-12-03', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 5600, Notes: 'Restaurant', Month: 'December' },
+                { Timestamp: '2024-12-07', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 8500, Notes: 'Gas bill', Month: 'December' },
+                { Timestamp: '2024-12-12', 'Sarah/Yugo': 'Yugo', Activity: 'Grocery', Amount: 9200, Notes: 'Weekly groceries', Month: 'December' },
+                { Timestamp: '2024-12-18', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 2800, Notes: 'Taxi', Month: 'December' },
+                { Timestamp: '2024-12-22', 'Sarah/Yugo': 'Yugo', Activity: 'Shopping', Amount: 15000, Notes: 'Christmas gifts', Month: 'December' },
+                { Timestamp: '2024-12-25', 'Sarah/Yugo': 'Sarah', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'December' },
+                // 2025 data
+                { Timestamp: '2025-01-02', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 3800, Notes: 'New Year dinner', Month: 'January' },
+                { Timestamp: '2025-01-08', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 11200, Notes: 'Big shopping', Month: 'January' },
+                { Timestamp: '2025-01-15', 'Sarah/Yugo': 'Yugo', Activity: 'Utilities', Amount: 9800, Notes: 'Internet', Month: 'January' },
+                { Timestamp: '2025-01-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 4500, Notes: 'Clothes', Month: 'January' },
+                { Timestamp: '2025-01-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'January' },
+                { Timestamp: '2025-01-28', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 5200, Notes: 'Train tickets', Month: 'January' },
             ];
             processData(sampleData);
         }
 
         // Process loaded data
         function processData(data) {
-            allData = data.map(row => ({
-                timestamp: row['Timestamp'] || row['timestamp'] || '',
-                person: row['Sarah/Yugo'] || row['sarah/yugo'] || row['Person'] || '',
-                activity: row['Activity'] || row['activity'] || '',
-                amount: parseAmount(row['Amount'] || row['amount']),
-                notes: row['Notes'] || row['notes'] || '',
-                month: row['Month'] || row['month'] || ''
-            })).filter(row => row.person && row.amount > 0);
+            allData = data.map(row => {
+                const timestamp = row['Timestamp'] || row['timestamp'] || '';
+                const month = row['Month'] || row['month'] || '';
+                const yearMonth = parseYearMonth(timestamp, month);
 
-            // Populate month filter
-            const months = [...new Set(allData.map(d => d.month))].filter(m => m);
-            const sortedMonths = months.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
+                return {
+                    timestamp: timestamp,
+                    person: row['Sarah/Yugo'] || row['sarah/yugo'] || row['Person'] || '',
+                    activity: row['Activity'] || row['activity'] || '',
+                    amount: parseAmount(row['Amount'] || row['amount']),
+                    notes: row['Notes'] || row['notes'] || '',
+                    month: month,
+                    yearMonthKey: yearMonth.key,
+                    yearMonthDisplay: yearMonth.display,
+                    yearMonthSort: yearMonth.sortValue
+                };
+            }).filter(row => row.person && row.amount > 0);
+
+            // Sort all data by timestamp
+            allData.sort((a, b) => a.yearMonthSort - b.yearMonthSort);
+
+            // Populate month filter with year-month options (sorted chronologically)
+            const yearMonthMap = new Map();
+            allData.forEach(d => {
+                if (!yearMonthMap.has(d.yearMonthKey)) {
+                    yearMonthMap.set(d.yearMonthKey, {
+                        key: d.yearMonthKey,
+                        display: d.yearMonthDisplay,
+                        sort: d.yearMonthSort
+                    });
+                }
+            });
+
+            const sortedYearMonths = [...yearMonthMap.values()].sort((a, b) => a.sort - b.sort);
 
             const monthSelect = document.getElementById('monthSelect');
             monthSelect.innerHTML = '<option value="all">All Months</option>';
-            sortedMonths.forEach(month => {
-                monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
+            sortedYearMonths.forEach(ym => {
+                monthSelect.innerHTML += `<option value="${ym.key}">${ym.display}</option>`;
             });
 
             filteredData = [...allData];
@@ -768,7 +835,7 @@ Publishing to web creates a public CSV URL that the dashboard can access.
             if (selectedMonth === 'all') {
                 filteredData = [...allData];
             } else {
-                filteredData = allData.filter(d => d.month === selectedMonth);
+                filteredData = allData.filter(d => d.yearMonthKey === selectedMonth);
             }
             updateDashboard();
         }
@@ -931,28 +998,30 @@ Publishing to web creates a public CSV URL that the dashboard can access.
         function updateMonthlyChart() {
             const monthlyData = {};
             allData.forEach(d => {
-                if (!monthlyData[d.month]) {
-                    monthlyData[d.month] = { sarah: 0, yugo: 0, total: 0 };
+                const key = d.yearMonthKey;
+                if (!monthlyData[key]) {
+                    monthlyData[key] = { sarah: 0, yugo: 0, total: 0, display: d.yearMonthDisplay, sort: d.yearMonthSort };
                 }
-                monthlyData[d.month].total += d.amount;
-                if (d.person === 'Sarah') monthlyData[d.month].sarah += d.amount;
-                if (d.person === 'Yugo') monthlyData[d.month].yugo += d.amount;
+                monthlyData[key].total += d.amount;
+                if (d.person === 'Sarah') monthlyData[key].sarah += d.amount;
+                if (d.person === 'Yugo') monthlyData[key].yugo += d.amount;
             });
 
-            const months = Object.keys(monthlyData).sort((a, b) =>
-                monthOrder.indexOf(a) - monthOrder.indexOf(b)
+            const sortedKeys = Object.keys(monthlyData).sort((a, b) =>
+                monthlyData[a].sort - monthlyData[b].sort
             );
+            const displayLabels = sortedKeys.map(k => monthlyData[k].display);
 
             if (charts.monthly) charts.monthly.destroy();
 
             charts.monthly = new Chart(document.getElementById('monthlyChart'), {
                 type: 'line',
                 data: {
-                    labels: months,
+                    labels: displayLabels,
                     datasets: [
                         {
                             label: 'Total',
-                            data: months.map(m => monthlyData[m].total),
+                            data: sortedKeys.map(k => monthlyData[k].total),
                             borderColor: '#667eea',
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             fill: true,
@@ -960,7 +1029,7 @@ Publishing to web creates a public CSV URL that the dashboard can access.
                         },
                         {
                             label: 'Sarah',
-                            data: months.map(m => monthlyData[m].sarah),
+                            data: sortedKeys.map(k => monthlyData[k].sarah),
                             borderColor: '#FF6B9D',
                             backgroundColor: 'transparent',
                             borderDash: [5, 5],
@@ -968,7 +1037,7 @@ Publishing to web creates a public CSV URL that the dashboard can access.
                         },
                         {
                             label: 'Yugo',
-                            data: months.map(m => monthlyData[m].yugo),
+                            data: sortedKeys.map(k => monthlyData[k].yugo),
                             borderColor: '#4ECDC4',
                             backgroundColor: 'transparent',
                             borderDash: [5, 5],
@@ -1006,19 +1075,21 @@ Publishing to web creates a public CSV URL that the dashboard can access.
         function updateBalanceChart() {
             const monthlyBalance = {};
             allData.forEach(d => {
-                if (!monthlyBalance[d.month]) {
-                    monthlyBalance[d.month] = { sarah: 0, yugo: 0 };
+                const key = d.yearMonthKey;
+                if (!monthlyBalance[key]) {
+                    monthlyBalance[key] = { sarah: 0, yugo: 0, display: d.yearMonthDisplay, sort: d.yearMonthSort };
                 }
-                if (d.person === 'Sarah') monthlyBalance[d.month].sarah += d.amount;
-                if (d.person === 'Yugo') monthlyBalance[d.month].yugo += d.amount;
+                if (d.person === 'Sarah') monthlyBalance[key].sarah += d.amount;
+                if (d.person === 'Yugo') monthlyBalance[key].yugo += d.amount;
             });
 
-            const months = Object.keys(monthlyBalance).sort((a, b) =>
-                monthOrder.indexOf(a) - monthOrder.indexOf(b)
+            const sortedKeys = Object.keys(monthlyBalance).sort((a, b) =>
+                monthlyBalance[a].sort - monthlyBalance[b].sort
             );
+            const displayLabels = sortedKeys.map(k => monthlyBalance[k].display);
 
             // Calculate difference (positive = Sarah paid more, negative = Yugo paid more)
-            const differences = months.map(m => monthlyBalance[m].sarah - monthlyBalance[m].yugo);
+            const differences = sortedKeys.map(k => monthlyBalance[k].sarah - monthlyBalance[k].yugo);
             const colors = differences.map(d => d > 0 ? '#FF6B9D' : '#4ECDC4');
 
             if (charts.balance) charts.balance.destroy();
@@ -1026,7 +1097,7 @@ Publishing to web creates a public CSV URL that the dashboard can access.
             charts.balance = new Chart(document.getElementById('balanceChart'), {
                 type: 'bar',
                 data: {
-                    labels: months,
+                    labels: displayLabels,
                     datasets: [{
                         label: 'Balance (Sarah - Yugo)',
                         data: differences,
@@ -1072,15 +1143,16 @@ Publishing to web creates a public CSV URL that the dashboard can access.
         function updateMonthlyTable() {
             const monthlyData = {};
             allData.forEach(d => {
-                if (!monthlyData[d.month]) {
-                    monthlyData[d.month] = { sarah: 0, yugo: 0 };
+                const key = d.yearMonthKey;
+                if (!monthlyData[key]) {
+                    monthlyData[key] = { sarah: 0, yugo: 0, display: d.yearMonthDisplay, sort: d.yearMonthSort };
                 }
-                if (d.person === 'Sarah') monthlyData[d.month].sarah += d.amount;
-                if (d.person === 'Yugo') monthlyData[d.month].yugo += d.amount;
+                if (d.person === 'Sarah') monthlyData[key].sarah += d.amount;
+                if (d.person === 'Yugo') monthlyData[key].yugo += d.amount;
             });
 
-            const months = Object.keys(monthlyData).sort((a, b) =>
-                monthOrder.indexOf(a) - monthOrder.indexOf(b)
+            const sortedKeys = Object.keys(monthlyData).sort((a, b) =>
+                monthlyData[a].sort - monthlyData[b].sort
             );
 
             const tbody = document.getElementById('monthlyTableBody');
@@ -1088,8 +1160,8 @@ Publishing to web creates a public CSV URL that the dashboard can access.
 
             let totalSarah = 0, totalYugo = 0;
 
-            months.forEach(month => {
-                const data = monthlyData[month];
+            sortedKeys.forEach(key => {
+                const data = monthlyData[key];
                 const total = data.sarah + data.yugo;
                 const fairShare = total / 2;
                 const difference = data.sarah - data.yugo;
@@ -1108,7 +1180,7 @@ Publishing to web creates a public CSV URL that the dashboard can access.
 
                 tbody.innerHTML += `
                     <tr>
-                        <td><strong>${month}</strong></td>
+                        <td><strong>${data.display}</strong></td>
                         <td class="amount sarah-color">${formatCurrency(data.sarah)}</td>
                         <td class="amount yugo-color">${formatCurrency(data.yugo)}</td>
                         <td class="amount">${formatCurrency(total)}</td>
