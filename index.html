@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Dashboard - Sarah & Yugo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .data-source {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .data-source h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .input-group input {
+            flex: 1;
+            min-width: 300px;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .card .subtext {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .card.sarah {
+            border-left: 4px solid #FF6B9D;
+        }
+
+        .card.yugo {
+            border-left: 4px solid #4ECDC4;
+        }
+
+        .card.balance {
+            border-left: 4px solid #FFE66D;
+        }
+
+        .card.total {
+            border-left: 4px solid #667eea;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .chart-container h3 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .monthly-table {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        .monthly-table h3 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .amount {
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        .sarah-color {
+            color: #FF6B9D;
+        }
+
+        .yugo-color {
+            color: #4ECDC4;
+        }
+
+        .positive {
+            color: #4ECDC4;
+        }
+
+        .negative {
+            color: #FF6B9D;
+        }
+
+        .balance-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .balance-indicator.sarah-owes {
+            background: #FFE6EE;
+            color: #FF6B9D;
+        }
+
+        .balance-indicator.yugo-owes {
+            background: #E6FAF8;
+            color: #4ECDC4;
+        }
+
+        .balance-indicator.even {
+            background: #FFF9E6;
+            color: #FFB800;
+        }
+
+        .month-filter {
+            margin-bottom: 20px;
+        }
+
+        .month-filter select {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .help-text {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .help-text code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-wrapper {
+                height: 250px;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Expense Dashboard</h1>
+            <p>Track and analyze expenses for Sarah & Yugo</p>
+        </header>
+
+        <div class="data-source">
+            <h3>Data Source</h3>
+            <div class="input-group">
+                <input type="text" id="sheetUrl" placeholder="Enter published Google Sheet CSV URL..."
+                       value="https://docs.google.com/spreadsheets/d/19uE_m-Zx_ikGplK-E4rb0TDlxZs9M-5xqcJqSdW4Z9s/pub?gid=2103820485&single=true&output=csv">
+                <button class="btn btn-primary" onclick="loadFromSheet()">Load Data</button>
+                <button class="btn btn-secondary" onclick="loadSampleData()">Use Sample Data</button>
+            </div>
+            <p class="help-text">
+                To use your Google Sheet: Go to <code>File → Share → Publish to web</code>, select CSV format, and paste the URL above.
+            </p>
+        </div>
+
+        <div class="month-filter">
+            <label for="monthSelect"><strong>Filter by Month:</strong></label>
+            <select id="monthSelect" onchange="filterByMonth()">
+                <option value="all">All Months</option>
+            </select>
+        </div>
+
+        <div class="summary-cards">
+            <div class="card total">
+                <h3>Total Expenses</h3>
+                <div class="value" id="totalExpenses">¥0</div>
+                <div class="subtext" id="totalTransactions">0 transactions</div>
+            </div>
+            <div class="card sarah">
+                <h3>Sarah's Total</h3>
+                <div class="value" id="sarahTotal">¥0</div>
+                <div class="subtext" id="sarahPercent">0% of total</div>
+            </div>
+            <div class="card yugo">
+                <h3>Yugo's Total</h3>
+                <div class="value" id="yugoTotal">¥0</div>
+                <div class="subtext" id="yugoPercent">0% of total</div>
+            </div>
+            <div class="card balance">
+                <h3>Balance Status</h3>
+                <div class="value" id="balanceStatus">-</div>
+                <div class="subtext" id="balanceAmount">-</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>Expenses by Activity</h3>
+                <div class="chart-wrapper">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h3>Sarah vs Yugo Comparison</h3>
+                <div class="chart-wrapper">
+                    <canvas id="personChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h3>Monthly Expenses Trend</h3>
+                <div class="chart-wrapper">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h3>Monthly Balance (Who Paid More)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="balanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="monthly-table">
+            <h3>Monthly Breakdown - Who Overpays?</h3>
+            <table id="monthlyTable">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Sarah Paid</th>
+                        <th>Yugo Paid</th>
+                        <th>Total</th>
+                        <th>Fair Share (50%)</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="monthlyTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="monthly-table">
+            <h3>Recent Transactions</h3>
+            <table id="transactionsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Person</th>
+                        <th>Activity</th>
+                        <th>Amount</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Global data storage
+        let allData = [];
+        let filteredData = [];
+        let charts = {};
+
+        // Activity colors
+        const activityColors = {
+            'Eat Out': '#FF6B6B',
+            'Grocery': '#4ECDC4',
+            'Transport': '#45B7D1',
+            'Rent/Maintenance': '#96CEB4',
+            'Utilities': '#FFEAA7',
+            'Shopping': '#DDA0DD'
+        };
+
+        // Month order for sorting
+        const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+
+        // Format currency
+        function formatCurrency(amount) {
+            return '¥' + Math.round(amount).toLocaleString('ja-JP');
+        }
+
+        // Parse amount from string
+        function parseAmount(value) {
+            if (typeof value === 'number') return value;
+            if (!value) return 0;
+            // Remove currency symbols, commas, and spaces
+            const cleaned = String(value).replace(/[¥,$\s,]/g, '');
+            return parseFloat(cleaned) || 0;
+        }
+
+        // Load data from Google Sheet
+        async function loadFromSheet() {
+            const url = document.getElementById('sheetUrl').value.trim();
+            if (!url) {
+                alert('Please enter a Google Sheet URL');
+                return;
+            }
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to fetch data');
+                const csvText = await response.text();
+
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        processData(results.data);
+                    },
+                    error: function(error) {
+                        console.error('Parse error:', error);
+                        alert('Error parsing CSV data. Please check the URL.');
+                    }
+                });
+            } catch (error) {
+                console.error('Fetch error:', error);
+                alert('Could not load data. Make sure the sheet is published to web.\n\nGo to: File → Share → Publish to web → Select CSV format');
+            }
+        }
+
+        // Load sample data
+        function loadSampleData() {
+            const sampleData = [
+                { Timestamp: '2024-01-05', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 8500, Notes: 'Weekly groceries', Month: 'January' },
+                { Timestamp: '2024-01-08', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 4200, Notes: 'Dinner', Month: 'January' },
+                { Timestamp: '2024-01-10', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 12000, Notes: 'Electricity', Month: 'January' },
+                { Timestamp: '2024-01-15', 'Sarah/Yugo': 'Yugo', Activity: 'Transport', Amount: 3500, Notes: 'Train pass', Month: 'January' },
+                { Timestamp: '2024-01-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 6800, Notes: 'Home supplies', Month: 'January' },
+                { Timestamp: '2024-01-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'January' },
+                { Timestamp: '2024-01-28', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 7200, Notes: 'Groceries', Month: 'January' },
+                { Timestamp: '2024-02-03', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 5600, Notes: 'Restaurant', Month: 'February' },
+                { Timestamp: '2024-02-07', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 8500, Notes: 'Gas bill', Month: 'February' },
+                { Timestamp: '2024-02-12', 'Sarah/Yugo': 'Yugo', Activity: 'Grocery', Amount: 9200, Notes: 'Weekly groceries', Month: 'February' },
+                { Timestamp: '2024-02-18', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 2800, Notes: 'Taxi', Month: 'February' },
+                { Timestamp: '2024-02-22', 'Sarah/Yugo': 'Yugo', Activity: 'Shopping', Amount: 15000, Notes: 'New appliance', Month: 'February' },
+                { Timestamp: '2024-02-25', 'Sarah/Yugo': 'Sarah', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'February' },
+                { Timestamp: '2024-03-02', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 3800, Notes: 'Lunch', Month: 'March' },
+                { Timestamp: '2024-03-08', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 11200, Notes: 'Big shopping', Month: 'March' },
+                { Timestamp: '2024-03-15', 'Sarah/Yugo': 'Yugo', Activity: 'Utilities', Amount: 9800, Notes: 'Internet', Month: 'March' },
+                { Timestamp: '2024-03-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 4500, Notes: 'Clothes', Month: 'March' },
+                { Timestamp: '2024-03-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'March' },
+                { Timestamp: '2024-03-28', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 5200, Notes: 'Train tickets', Month: 'March' },
+            ];
+            processData(sampleData);
+        }
+
+        // Process loaded data
+        function processData(data) {
+            allData = data.map(row => ({
+                timestamp: row['Timestamp'] || row['timestamp'] || '',
+                person: row['Sarah/Yugo'] || row['sarah/yugo'] || row['Person'] || '',
+                activity: row['Activity'] || row['activity'] || '',
+                amount: parseAmount(row['Amount'] || row['amount']),
+                notes: row['Notes'] || row['notes'] || '',
+                month: row['Month'] || row['month'] || ''
+            })).filter(row => row.person && row.amount > 0);
+
+            // Populate month filter
+            const months = [...new Set(allData.map(d => d.month))].filter(m => m);
+            const sortedMonths = months.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
+
+            const monthSelect = document.getElementById('monthSelect');
+            monthSelect.innerHTML = '<option value="all">All Months</option>';
+            sortedMonths.forEach(month => {
+                monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
+            });
+
+            filteredData = [...allData];
+            updateDashboard();
+        }
+
+        // Filter by month
+        function filterByMonth() {
+            const selectedMonth = document.getElementById('monthSelect').value;
+            if (selectedMonth === 'all') {
+                filteredData = [...allData];
+            } else {
+                filteredData = allData.filter(d => d.month === selectedMonth);
+            }
+            updateDashboard();
+        }
+
+        // Update all dashboard elements
+        function updateDashboard() {
+            updateSummaryCards();
+            updateActivityChart();
+            updatePersonChart();
+            updateMonthlyChart();
+            updateBalanceChart();
+            updateMonthlyTable();
+            updateTransactionsTable();
+        }
+
+        // Update summary cards
+        function updateSummaryCards() {
+            const total = filteredData.reduce((sum, d) => sum + d.amount, 0);
+            const sarahTotal = filteredData.filter(d => d.person === 'Sarah').reduce((sum, d) => sum + d.amount, 0);
+            const yugoTotal = filteredData.filter(d => d.person === 'Yugo').reduce((sum, d) => sum + d.amount, 0);
+
+            document.getElementById('totalExpenses').textContent = formatCurrency(total);
+            document.getElementById('totalTransactions').textContent = `${filteredData.length} transactions`;
+
+            document.getElementById('sarahTotal').textContent = formatCurrency(sarahTotal);
+            document.getElementById('sarahPercent').textContent = total > 0 ? `${Math.round(sarahTotal/total*100)}% of total` : '0% of total';
+
+            document.getElementById('yugoTotal').textContent = formatCurrency(yugoTotal);
+            document.getElementById('yugoPercent').textContent = total > 0 ? `${Math.round(yugoTotal/total*100)}% of total` : '0% of total';
+
+            const fairShare = total / 2;
+            const difference = sarahTotal - yugoTotal;
+
+            if (Math.abs(difference) < 100) {
+                document.getElementById('balanceStatus').textContent = 'Even!';
+                document.getElementById('balanceAmount').textContent = 'Expenses are balanced';
+            } else if (difference > 0) {
+                document.getElementById('balanceStatus').innerHTML = '<span class="yugo-color">Yugo owes Sarah</span>';
+                document.getElementById('balanceAmount').textContent = formatCurrency(difference / 2);
+            } else {
+                document.getElementById('balanceStatus').innerHTML = '<span class="sarah-color">Sarah owes Yugo</span>';
+                document.getElementById('balanceAmount').textContent = formatCurrency(Math.abs(difference) / 2);
+            }
+        }
+
+        // Update Activity Pie Chart
+        function updateActivityChart() {
+            const activityData = {};
+            filteredData.forEach(d => {
+                activityData[d.activity] = (activityData[d.activity] || 0) + d.amount;
+            });
+
+            const labels = Object.keys(activityData);
+            const data = Object.values(activityData);
+            const colors = labels.map(label => activityColors[label] || '#999');
+
+            if (charts.activity) charts.activity.destroy();
+
+            charts.activity = new Chart(document.getElementById('activityChart'), {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round(context.raw / total * 100);
+                                    return `${context.label}: ${formatCurrency(context.raw)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update Person Bar Chart
+        function updatePersonChart() {
+            const activities = [...new Set(filteredData.map(d => d.activity))];
+
+            const sarahData = activities.map(activity =>
+                filteredData.filter(d => d.person === 'Sarah' && d.activity === activity)
+                    .reduce((sum, d) => sum + d.amount, 0)
+            );
+
+            const yugoData = activities.map(activity =>
+                filteredData.filter(d => d.person === 'Yugo' && d.activity === activity)
+                    .reduce((sum, d) => sum + d.amount, 0)
+            );
+
+            if (charts.person) charts.person.destroy();
+
+            charts.person = new Chart(document.getElementById('personChart'), {
+                type: 'bar',
+                data: {
+                    labels: activities,
+                    datasets: [
+                        {
+                            label: 'Sarah',
+                            data: sarahData,
+                            backgroundColor: '#FF6B9D',
+                            borderRadius: 5
+                        },
+                        {
+                            label: 'Yugo',
+                            data: yugoData,
+                            backgroundColor: '#4ECDC4',
+                            borderRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update Monthly Trend Chart
+        function updateMonthlyChart() {
+            const monthlyData = {};
+            allData.forEach(d => {
+                if (!monthlyData[d.month]) {
+                    monthlyData[d.month] = { sarah: 0, yugo: 0, total: 0 };
+                }
+                monthlyData[d.month].total += d.amount;
+                if (d.person === 'Sarah') monthlyData[d.month].sarah += d.amount;
+                if (d.person === 'Yugo') monthlyData[d.month].yugo += d.amount;
+            });
+
+            const months = Object.keys(monthlyData).sort((a, b) =>
+                monthOrder.indexOf(a) - monthOrder.indexOf(b)
+            );
+
+            if (charts.monthly) charts.monthly.destroy();
+
+            charts.monthly = new Chart(document.getElementById('monthlyChart'), {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'Total',
+                            data: months.map(m => monthlyData[m].total),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Sarah',
+                            data: months.map(m => monthlyData[m].sarah),
+                            borderColor: '#FF6B9D',
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Yugo',
+                            data: months.map(m => monthlyData[m].yugo),
+                            borderColor: '#4ECDC4',
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update Balance Chart
+        function updateBalanceChart() {
+            const monthlyBalance = {};
+            allData.forEach(d => {
+                if (!monthlyBalance[d.month]) {
+                    monthlyBalance[d.month] = { sarah: 0, yugo: 0 };
+                }
+                if (d.person === 'Sarah') monthlyBalance[d.month].sarah += d.amount;
+                if (d.person === 'Yugo') monthlyBalance[d.month].yugo += d.amount;
+            });
+
+            const months = Object.keys(monthlyBalance).sort((a, b) =>
+                monthOrder.indexOf(a) - monthOrder.indexOf(b)
+            );
+
+            // Calculate difference (positive = Sarah paid more, negative = Yugo paid more)
+            const differences = months.map(m => monthlyBalance[m].sarah - monthlyBalance[m].yugo);
+            const colors = differences.map(d => d > 0 ? '#FF6B9D' : '#4ECDC4');
+
+            if (charts.balance) charts.balance.destroy();
+
+            charts.balance = new Chart(document.getElementById('balanceChart'), {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Balance (Sarah - Yugo)',
+                        data: differences,
+                        backgroundColor: colors,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    if (value > 0) {
+                                        return `Sarah paid ${formatCurrency(value)} more`;
+                                    } else if (value < 0) {
+                                        return `Yugo paid ${formatCurrency(Math.abs(value))} more`;
+                                    }
+                                    return 'Even';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update Monthly Table
+        function updateMonthlyTable() {
+            const monthlyData = {};
+            allData.forEach(d => {
+                if (!monthlyData[d.month]) {
+                    monthlyData[d.month] = { sarah: 0, yugo: 0 };
+                }
+                if (d.person === 'Sarah') monthlyData[d.month].sarah += d.amount;
+                if (d.person === 'Yugo') monthlyData[d.month].yugo += d.amount;
+            });
+
+            const months = Object.keys(monthlyData).sort((a, b) =>
+                monthOrder.indexOf(a) - monthOrder.indexOf(b)
+            );
+
+            const tbody = document.getElementById('monthlyTableBody');
+            tbody.innerHTML = '';
+
+            let totalSarah = 0, totalYugo = 0;
+
+            months.forEach(month => {
+                const data = monthlyData[month];
+                const total = data.sarah + data.yugo;
+                const fairShare = total / 2;
+                const difference = data.sarah - data.yugo;
+
+                totalSarah += data.sarah;
+                totalYugo += data.yugo;
+
+                let balanceHtml;
+                if (Math.abs(difference) < 100) {
+                    balanceHtml = '<span class="balance-indicator even">Even</span>';
+                } else if (difference > 0) {
+                    balanceHtml = `<span class="balance-indicator yugo-owes">Yugo owes ${formatCurrency(difference/2)}</span>`;
+                } else {
+                    balanceHtml = `<span class="balance-indicator sarah-owes">Sarah owes ${formatCurrency(Math.abs(difference)/2)}</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${month}</strong></td>
+                        <td class="amount sarah-color">${formatCurrency(data.sarah)}</td>
+                        <td class="amount yugo-color">${formatCurrency(data.yugo)}</td>
+                        <td class="amount">${formatCurrency(total)}</td>
+                        <td class="amount">${formatCurrency(fairShare)}</td>
+                        <td>${balanceHtml}</td>
+                    </tr>
+                `;
+            });
+
+            // Add total row
+            const grandTotal = totalSarah + totalYugo;
+            const grandDifference = totalSarah - totalYugo;
+            let grandBalanceHtml;
+            if (Math.abs(grandDifference) < 100) {
+                grandBalanceHtml = '<span class="balance-indicator even">Even</span>';
+            } else if (grandDifference > 0) {
+                grandBalanceHtml = `<span class="balance-indicator yugo-owes">Yugo owes ${formatCurrency(grandDifference/2)}</span>`;
+            } else {
+                grandBalanceHtml = `<span class="balance-indicator sarah-owes">Sarah owes ${formatCurrency(Math.abs(grandDifference)/2)}</span>`;
+            }
+
+            tbody.innerHTML += `
+                <tr style="background: #f8f9fa; font-weight: bold;">
+                    <td>TOTAL</td>
+                    <td class="amount sarah-color">${formatCurrency(totalSarah)}</td>
+                    <td class="amount yugo-color">${formatCurrency(totalYugo)}</td>
+                    <td class="amount">${formatCurrency(grandTotal)}</td>
+                    <td class="amount">${formatCurrency(grandTotal/2)}</td>
+                    <td>${grandBalanceHtml}</td>
+                </tr>
+            `;
+        }
+
+        // Update Transactions Table
+        function updateTransactionsTable() {
+            const tbody = document.getElementById('transactionsBody');
+            tbody.innerHTML = '';
+
+            const sortedData = [...filteredData].sort((a, b) =>
+                new Date(b.timestamp) - new Date(a.timestamp)
+            ).slice(0, 20); // Show latest 20
+
+            sortedData.forEach(d => {
+                const personClass = d.person === 'Sarah' ? 'sarah-color' : 'yugo-color';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${d.timestamp}</td>
+                        <td class="${personClass}"><strong>${d.person}</strong></td>
+                        <td>${d.activity}</td>
+                        <td class="amount">${formatCurrency(d.amount)}</td>
+                        <td>${d.notes}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Load sample data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSampleData();
+        });
+    </script>
+</body>
+</html>
