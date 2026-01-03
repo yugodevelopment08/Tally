@@ -552,7 +552,8 @@
                         <th>Date</th>
                         <th>Person</th>
                         <th>Activity</th>
-                        <th>Amount</th>
+                        <th>Original</th>
+                        <th>In JPY</th>
                         <th>Notes</th>
                     </tr>
                 </thead>
@@ -598,6 +599,62 @@
             'Utilities': '#FFEAA7',
             'Shopping': '#DDA0DD'
         };
+
+        // Exchange rates to JPY (approximate rates - update as needed)
+        // These are rough estimates. For accurate conversion, you may want to update periodically.
+        const exchangeRates = {
+            'JPY': 1,
+            'KRW': 0.115,      // 1 KRW ≈ 0.115 JPY (1000 KRW ≈ 115 JPY)
+            'USD': 150,        // 1 USD ≈ 150 JPY
+            'EUR': 162,        // 1 EUR ≈ 162 JPY
+            'GBP': 190,        // 1 GBP ≈ 190 JPY
+            'CNY': 21,         // 1 CNY ≈ 21 JPY
+            'TWD': 4.7,        // 1 TWD ≈ 4.7 JPY
+            'THB': 4.3,        // 1 THB ≈ 4.3 JPY
+            'SGD': 112,        // 1 SGD ≈ 112 JPY
+            'HKD': 19,         // 1 HKD ≈ 19 JPY
+            'AUD': 98,         // 1 AUD ≈ 98 JPY
+            'PHP': 2.7,        // 1 PHP ≈ 2.7 JPY
+            'VND': 0.0061,     // 1 VND ≈ 0.0061 JPY
+            'MYR': 34,         // 1 MYR ≈ 34 JPY
+            'IDR': 0.0095      // 1 IDR ≈ 0.0095 JPY
+        };
+
+        // Convert amount to JPY
+        function convertToJPY(amount, currency) {
+            const curr = (currency || 'JPY').toUpperCase().trim();
+            const rate = exchangeRates[curr];
+            if (rate) {
+                return amount * rate;
+            }
+            // Unknown currency - assume JPY
+            console.warn(`Unknown currency: ${currency}, treating as JPY`);
+            return amount;
+        }
+
+        // Format currency with symbol
+        function formatOriginalCurrency(amount, currency) {
+            const curr = (currency || 'JPY').toUpperCase().trim();
+            const symbols = {
+                'JPY': '¥',
+                'KRW': '₩',
+                'USD': '$',
+                'EUR': '€',
+                'GBP': '£',
+                'CNY': '¥',
+                'TWD': 'NT$',
+                'THB': '฿',
+                'SGD': 'S$',
+                'HKD': 'HK$',
+                'AUD': 'A$',
+                'PHP': '₱',
+                'VND': '₫',
+                'MYR': 'RM',
+                'IDR': 'Rp'
+            };
+            const symbol = symbols[curr] || curr + ' ';
+            return symbol + Math.round(amount).toLocaleString();
+        }
 
         // Month names for display
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -787,26 +844,31 @@ Publishing to web creates a public CSV URL that the dashboard can access.
         function loadSampleData() {
             updateLastUpdatedTime();
             const sampleData = [
-                // 2024 data
-                { Timestamp: '2024-11-05', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 8500, Notes: 'Weekly groceries', Month: 'November' },
-                { Timestamp: '2024-11-08', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 4200, Notes: 'Dinner', Month: 'November' },
-                { Timestamp: '2024-11-10', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 12000, Notes: 'Electricity', Month: 'November' },
-                { Timestamp: '2024-11-15', 'Sarah/Yugo': 'Yugo', Activity: 'Transport', Amount: 3500, Notes: 'Train pass', Month: 'November' },
-                { Timestamp: '2024-11-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 6800, Notes: 'Home supplies', Month: 'November' },
-                { Timestamp: '2024-11-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'November' },
-                { Timestamp: '2024-12-03', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 5600, Notes: 'Restaurant', Month: 'December' },
-                { Timestamp: '2024-12-07', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 8500, Notes: 'Gas bill', Month: 'December' },
-                { Timestamp: '2024-12-12', 'Sarah/Yugo': 'Yugo', Activity: 'Grocery', Amount: 9200, Notes: 'Weekly groceries', Month: 'December' },
-                { Timestamp: '2024-12-18', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 2800, Notes: 'Taxi', Month: 'December' },
-                { Timestamp: '2024-12-22', 'Sarah/Yugo': 'Yugo', Activity: 'Shopping', Amount: 15000, Notes: 'Christmas gifts', Month: 'December' },
-                { Timestamp: '2024-12-25', 'Sarah/Yugo': 'Sarah', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'December' },
+                // 2024 data - Japan
+                { Timestamp: '2024-11-05', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 8500, Currency: '', Notes: 'Weekly groceries', Month: 'November' },
+                { Timestamp: '2024-11-08', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 4200, Currency: 'JPY', Notes: 'Dinner', Month: 'November' },
+                { Timestamp: '2024-11-10', 'Sarah/Yugo': 'Sarah', Activity: 'Utilities', Amount: 12000, Currency: '', Notes: 'Electricity', Month: 'November' },
+                { Timestamp: '2024-11-15', 'Sarah/Yugo': 'Yugo', Activity: 'Transport', Amount: 3500, Currency: '', Notes: 'Train pass', Month: 'November' },
+                { Timestamp: '2024-11-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 6800, Currency: '', Notes: 'Home supplies', Month: 'November' },
+                { Timestamp: '2024-11-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Currency: '', Notes: 'Rent', Month: 'November' },
+                // 2024 December - Korea trip!
+                { Timestamp: '2024-12-03', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 45000, Currency: 'KRW', Notes: 'Korean BBQ in Seoul', Month: 'December' },
+                { Timestamp: '2024-12-04', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 15000, Currency: 'KRW', Notes: 'Seoul metro', Month: 'December' },
+                { Timestamp: '2024-12-05', 'Sarah/Yugo': 'Yugo', Activity: 'Shopping', Amount: 89000, Currency: 'KRW', Notes: 'Myeongdong shopping', Month: 'December' },
+                { Timestamp: '2024-12-06', 'Sarah/Yugo': 'Sarah', Activity: 'Eat Out', Amount: 32000, Currency: 'KRW', Notes: 'Cafe in Hongdae', Month: 'December' },
+                // Back to Japan
+                { Timestamp: '2024-12-15', 'Sarah/Yugo': 'Yugo', Activity: 'Grocery', Amount: 9200, Currency: '', Notes: 'Weekly groceries', Month: 'December' },
+                { Timestamp: '2024-12-18', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 2800, Currency: 'JPY', Notes: 'Taxi', Month: 'December' },
+                { Timestamp: '2024-12-22', 'Sarah/Yugo': 'Yugo', Activity: 'Shopping', Amount: 15000, Currency: '', Notes: 'Christmas gifts', Month: 'December' },
+                { Timestamp: '2024-12-25', 'Sarah/Yugo': 'Sarah', Activity: 'Rent/Maintenance', Amount: 85000, Currency: '', Notes: 'Rent', Month: 'December' },
                 // 2025 data
-                { Timestamp: '2025-01-02', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 3800, Notes: 'New Year dinner', Month: 'January' },
-                { Timestamp: '2025-01-08', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 11200, Notes: 'Big shopping', Month: 'January' },
-                { Timestamp: '2025-01-15', 'Sarah/Yugo': 'Yugo', Activity: 'Utilities', Amount: 9800, Notes: 'Internet', Month: 'January' },
-                { Timestamp: '2025-01-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 4500, Notes: 'Clothes', Month: 'January' },
-                { Timestamp: '2025-01-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Notes: 'Rent', Month: 'January' },
-                { Timestamp: '2025-01-28', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 5200, Notes: 'Train tickets', Month: 'January' },
+                { Timestamp: '2025-01-02', 'Sarah/Yugo': 'Yugo', Activity: 'Eat Out', Amount: 3800, Currency: '', Notes: 'New Year dinner', Month: 'January' },
+                { Timestamp: '2025-01-08', 'Sarah/Yugo': 'Sarah', Activity: 'Grocery', Amount: 11200, Currency: '', Notes: 'Big shopping', Month: 'January' },
+                { Timestamp: '2025-01-15', 'Sarah/Yugo': 'Yugo', Activity: 'Utilities', Amount: 9800, Currency: '', Notes: 'Internet', Month: 'January' },
+                { Timestamp: '2025-01-18', 'Sarah/Yugo': 'Sarah', Activity: 'Eat Out', Amount: 25, Currency: 'USD', Notes: 'Airport lunch (transit)', Month: 'January' },
+                { Timestamp: '2025-01-20', 'Sarah/Yugo': 'Sarah', Activity: 'Shopping', Amount: 4500, Currency: '', Notes: 'Clothes', Month: 'January' },
+                { Timestamp: '2025-01-25', 'Sarah/Yugo': 'Yugo', Activity: 'Rent/Maintenance', Amount: 85000, Currency: '', Notes: 'Rent', Month: 'January' },
+                { Timestamp: '2025-01-28', 'Sarah/Yugo': 'Sarah', Activity: 'Transport', Amount: 5200, Currency: '', Notes: 'Train tickets', Month: 'January' },
             ];
             processData(sampleData);
         }
@@ -821,11 +883,18 @@ Publishing to web creates a public CSV URL that the dashboard can access.
                 // Extract year and month number from yearMonthKey (format: "2024-01")
                 const [year, monthNum] = yearMonth.key.split('-').map(Number);
 
+                // Handle currency - default to JPY if blank
+                const originalAmount = parseAmount(row['Amount'] || row['amount']);
+                const currency = (row['Currency'] || row['currency'] || 'JPY').toUpperCase().trim() || 'JPY';
+                const amountJPY = convertToJPY(originalAmount, currency);
+
                 return {
                     timestamp: timestamp,
                     person: row['Sarah/Yugo'] || row['sarah/yugo'] || row['Person'] || '',
                     activity: row['Activity'] || row['activity'] || '',
-                    amount: parseAmount(row['Amount'] || row['amount']),
+                    amount: amountJPY,           // Converted to JPY for calculations
+                    originalAmount: originalAmount, // Original amount
+                    currency: currency,          // Original currency
                     notes: row['Notes'] || row['notes'] || '',
                     month: month,
                     year: year,
@@ -1257,12 +1326,18 @@ Publishing to web creates a public CSV URL that the dashboard can access.
 
             sortedData.forEach(d => {
                 const personClass = d.person === 'Sarah' ? 'sarah-color' : 'yugo-color';
+                const originalDisplay = formatOriginalCurrency(d.originalAmount, d.currency);
+                const jpyDisplay = formatCurrency(d.amount);
+                // Show conversion indicator if not JPY
+                const isConverted = d.currency !== 'JPY';
+
                 tbody.innerHTML += `
                     <tr>
                         <td>${d.timestamp}</td>
                         <td class="${personClass}"><strong>${d.person}</strong></td>
                         <td>${d.activity}</td>
-                        <td class="amount">${formatCurrency(d.amount)}</td>
+                        <td class="amount">${originalDisplay}</td>
+                        <td class="amount">${isConverted ? jpyDisplay : '-'}</td>
                         <td>${d.notes}</td>
                     </tr>
                 `;
