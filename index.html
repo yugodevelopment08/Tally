@@ -923,10 +923,22 @@ Publishing to web creates a public CSV URL that the dashboard can access.
             // Sort all data by timestamp
             allData.sort((a, b) => a.yearMonthSort - b.yearMonthSort);
 
+            // Get current date for default filter values
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; // 1-12
+
             // Populate year filter (sorted chronologically, filter out invalid years)
             const validYears = [...new Set(allData.map(d => d.year))]
                 .filter(year => year >= 2000 && year <= 2100)  // Only valid years
                 .sort((a, b) => a - b);
+
+            // Ensure current year is in the list
+            if (!validYears.includes(currentYear)) {
+                validYears.push(currentYear);
+                validYears.sort((a, b) => a - b);
+            }
+
             const yearSelect = document.getElementById('yearSelect');
             yearSelect.innerHTML = '<option value="all">All Years</option>';
             validYears.forEach(year => {
@@ -940,8 +952,12 @@ Publishing to web creates a public CSV URL that the dashboard can access.
                 monthSelect.innerHTML += `<option value="${index + 1}">${name}</option>`;
             });
 
-            filteredData = [...allData];
-            updateDashboard();
+            // Set default filter values to current year and month
+            yearSelect.value = currentYear.toString();
+            monthSelect.value = currentMonth.toString();
+
+            // Apply filters with default values
+            applyFilters();
         }
 
         // Apply both year and month filters
