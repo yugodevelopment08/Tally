@@ -518,12 +518,6 @@
                     <canvas id="monthlyChart"></canvas>
                 </div>
             </div>
-            <div class="chart-container">
-                <h3>Monthly Balance (Who Paid More)</h3>
-                <div class="chart-wrapper">
-                    <canvas id="balanceChart"></canvas>
-                </div>
-            </div>
         </div>
 
         <div class="monthly-table">
@@ -980,7 +974,6 @@ Publishing to web creates a public CSV URL that the dashboard can access.
             updateActivityChart();
             updatePersonChart();
             updateMonthlyChart();
-            updateBalanceChart();
             updateMonthlyTable();
             updateTransactionsTable();
         }
@@ -1194,74 +1187,6 @@ Publishing to web creates a public CSV URL that the dashboard can access.
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '¥' + value.toLocaleString();
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Update Balance Chart
-        function updateBalanceChart() {
-            const monthlyBalance = {};
-            allData.forEach(d => {
-                const key = d.yearMonthKey;
-                if (!monthlyBalance[key]) {
-                    monthlyBalance[key] = { sarah: 0, yugo: 0, display: d.yearMonthDisplay, sort: d.yearMonthSort };
-                }
-                if (d.person === 'Sarah') monthlyBalance[key].sarah += d.amount;
-                if (d.person === 'Yugo') monthlyBalance[key].yugo += d.amount;
-            });
-
-            const sortedKeys = Object.keys(monthlyBalance).sort((a, b) =>
-                monthlyBalance[a].sort - monthlyBalance[b].sort
-            );
-            const displayLabels = sortedKeys.map(k => monthlyBalance[k].display);
-
-            // Calculate difference (positive = Sarah paid more, negative = Yugo paid more)
-            const differences = sortedKeys.map(k => monthlyBalance[k].sarah - monthlyBalance[k].yugo);
-            const colors = differences.map(d => d > 0 ? '#FF6B9D' : '#4ECDC4');
-
-            if (charts.balance) charts.balance.destroy();
-
-            charts.balance = new Chart(document.getElementById('balanceChart'), {
-                type: 'bar',
-                data: {
-                    labels: displayLabels,
-                    datasets: [{
-                        label: 'Balance (Sarah - Yugo)',
-                        data: differences,
-                        backgroundColor: colors,
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.raw;
-                                    if (value > 0) {
-                                        return `Sarah paid ${formatCurrency(value)} more`;
-                                    } else if (value < 0) {
-                                        return `Yugo paid ${formatCurrency(Math.abs(value))} more`;
-                                    }
-                                    return 'Even';
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
                             ticks: {
                                 callback: function(value) {
                                     return '¥' + value.toLocaleString();
